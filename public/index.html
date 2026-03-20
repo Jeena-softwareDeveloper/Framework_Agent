@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeenora CEO Strategy Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --p: #6366f1; --s: #1e1b4b; --bg: #030712; }
+        body { background: var(--bg); color: white; font-family: 'Outfit', sans-serif; margin: 0; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 16px; box-shadow: 0 4px 30px rgba(0,0,0,0.5); }
+        h1 { font-size: 2.5rem; text-align: center; color: var(--p); letter-spacing: -1px; }
+        .stat { font-size: 3rem; font-weight: bold; margin: 10px 0; }
+        .label { opacity: 0.6; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 2px; }
+        .chart-container { height: 300px; }
+    </style>
+</head>
+<body>
+    <h1>JEENORA 🛡️ EXECUTIVE DASHBOARD</h1>
+    <div class="grid">
+        <div class="card"><div class="label">Farmers Reach</div><div class="stat" id="farmers">...</div><div class="chart-container"><canvas id="c1"></canvas></div></div>
+        <div class="card"><div class="label">Total Products</div><div class="stat" id="products">...</div><div class="chart-container"><canvas id="c2"></canvas></div></div>
+        <div class="card"><div class="label">Users Engagement</div><div class="stat" id="users">...</div><div class="chart-container"><canvas id="c3"></canvas></div></div>
+    </div>
+    <script>
+        fetch('/api/stats').then(res => res.json()).then(data => {
+            document.getElementById('farmers').innerText = data.farmers || 0;
+            document.getElementById('products').innerText = data.products || 0;
+            document.getElementById('users').innerText = data.users || 0;
+            // Chart logic
+            new Chart(document.getElementById('c1'), { type: 'line', data: { labels: ['W1', 'W2', 'W3'], datasets: [{ label: 'Growth', data: [10, 25, data.farmers], borderColor: '#6366f1' }] }});
+        });
+    </script>
+</body>
+</html>
