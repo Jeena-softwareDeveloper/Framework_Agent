@@ -1,14 +1,14 @@
-node_modules/
-.env
-.DS_Store
-dist/
-build/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.idea/
-.vscode/
-*.png
-*.jpg
-qr.png
+// src/models/core/chatHistory.js
+import mongoose from 'mongoose';
+
+const chatHistorySchema = new mongoose.Schema({
+  chatId: { type: String, required: true },
+  messages: [{
+    role: { type: String, enum: ['user', 'assistant'], required: true },
+    content: { type: String, required: true },
+    timestamp: { type: Date, default: Date.now }
+  }],
+  lastUpdated: { type: Date, default: Date.now }
+});
+
+export const ChatHistory = mongoose.model('chat_histories', chatHistorySchema);
