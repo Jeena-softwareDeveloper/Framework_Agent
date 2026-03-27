@@ -11,7 +11,15 @@ const leadSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-export const Lead = mongoose.model('Lead', leadSchema);
+const vaultSchema = new mongoose.Schema({
+  service: { type: String, unique: true }, // e.g: 'linkedin', 'facebook'
+  username: String,
+  password: { type: String }, // Store secure Boss!
+  updatedAt: { type: Date, default: Date.now },
+});
+
+export const Lead = mongoose.models.Lead || mongoose.model('Lead', leadSchema);
+export const Vault = mongoose.models.Vault || mongoose.model('Vault', vaultSchema);
 
 export const connectDB = async () => {
   try {
