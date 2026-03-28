@@ -1,12 +1,13 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { logger } from '../utils/logger.js';
+import { ENV } from '../config/env.js';
 import { llm } from './llmService.js';
 
 class AdvancedSearchService {
   constructor() {
     this.telegram = null;
-    this.logMessages = [];
+    this.statusMessageId = null;
   }
 
   setTelegram(telegramInstance) {
@@ -14,18 +15,28 @@ class AdvancedSearchService {
   }
 
   async sendUpdate(text) {
-    if (this.telegram) {
+    if (!this.telegram) return;
+    try {
+      if (this.statusMessageId) {
+        await this.telegram.bot.editMessageText(text, {
+          chat_id: ENV.TELEGRAM_CHAT_ID,
+          message_id: this.statusMessageId
+        }).catch(() => null);
+      } else {
+        const msg = await this.telegram.sendMessage(text).catch(() => null);
+        if (msg && msg.message_id) this.statusMessageId = msg.message_id;
+      }
+    } catch (e) {
+      // If editing fails (e.g. message deleted), send a new one
       const msg = await this.telegram.sendMessage(text).catch(() => null);
-      if (msg && msg.message_id) this.logMessages.push(msg.message_id);
+      if (msg && msg.message_id) this.statusMessageId = msg.message_id;
     }
   }
 
   async cleanupLogs() {
-    if (this.telegram) {
-      for (const id of this.logMessages) {
-        await this.telegram.deleteMessage(id);
-      }
-      this.logMessages = [];
+    if (this.telegram && this.statusMessageId) {
+      await this.telegram.deleteMessage(this.statusMessageId);
+      this.statusMessageId = null;
     }
   }
 
@@ -73,7 +84,6 @@ class AdvancedSearchService {
    */
   async deepSearch(query) {
     logger.info(`🔥 EXECUTING DEEP RESEARCH: ${query}`);
-    this.logMessages = [];
     await this.sendUpdate(`🔍 *INITIATING COMPREHENSIVE RESEARCH:* "${query}"`);
 
     // 1. STAGE 1: BROAD SEARCH
@@ -122,9 +132,6 @@ class AdvancedSearchService {
     Structure: Analysis -> Competitive Reality -> Growth Opportunities -> CEO Action Plan.`;
 
     const report = await llm.deepThink(synthesisPrompt);
-    
-    // Cleanup temporary logs Boss
-    await this.cleanupLogs();
     
     return `🏆 *FINAL STRATEGIC RESEARCH DOSSIER* \n\n${report}`;
   }

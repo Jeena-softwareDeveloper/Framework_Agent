@@ -14,7 +14,7 @@ import { userStates, chatHistory } from './state.js';
 /**
  * Main Command Hub for processing user input across Telegram & Web Dashboard
  */
-export async function handleUserInput(input, respond, chatId = 'current') {
+export async function handleUserInput(input, respond, chatId = 'current', onStream = null) {
   try {
     const trimmedInput = input.trim();
     if (trimmedInput.toLowerCase() === 'exit') return 'exit';
@@ -42,6 +42,34 @@ export async function handleUserInput(input, respond, chatId = 'current') {
     const isSearchRequest = /static page|website|lead/i.test(lowInput);
     const isSystemCmd = /database|collection|view|analyze|strategy|business|autonomous|ceo|spy|pitch|sentinel|market|community/i.test(lowInput);
     const isMarketAnalysis = /analyze market|market study|community analysis/i.test(lowInput);
+
+    // 🛡️ TOP-LEVEL COMMAND: DeepSeek Login Integration
+    if (lowInput.startsWith('/login_ds')) {
+        const parts = trimmedInput.split(/\s+/);
+        if (parts.length < 3) return "❌ Boss, login correct-ah kudunga: `/login_ds <username> <password>`";
+        
+        // Sanitize: Remove < > brackets if user included them Boss!
+        const username = parts[1].replace(/[<>]/g, '');
+        const password = parts[2].replace(/[<>]/g, '');
+        
+        const { Vault } = await import('../services/dbService.js');
+        await Vault.findOneAndUpdate({ service: 'deepseek' }, { username, password }, { upsert: true });
+
+        // 🚀 IMMEDIATE MISSION: Automated Login Boss!
+        await respond("✔ *Credentials Saved:* Initializing automated DeepSeek login mission Boss... 🛡️🌍🧠");
+        
+        try {
+            const { browser } = await import('../services/browserService.js');
+            const { deepSeek } = await import('../services/deepSeekService.js');
+            
+            await browser.init();
+            await deepSeek.handleLogin(browser.page);
+            
+            return "✔ *Login Success:* Cloud Brain is now AUTHENTICATED. Session saved and ready for missions Boss! 🛡️💎💰🚀";
+        } catch (err) {
+            return `❌ *Login Snag:* "${err.message}". Please check your credentials Boss!`;
+        }
+    }
 
     if (isSearchRequest) {
       userStates.set(chatId, { stage: 'awaiting_location' });
@@ -109,7 +137,7 @@ export async function handleUserInput(input, respond, chatId = 'current') {
     }
 
     // 3. Default AI Conversation (Antigravity CEO Mode)
-    return await llm.deepThink(trimmedInput, 25, chatId);
+    return await llm.deepThink(trimmedInput, 1, chatId, onStream);
 
   } catch (e) {
     logger.error(`Error in Command Hub: ${e.message}`);

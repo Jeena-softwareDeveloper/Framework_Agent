@@ -28,13 +28,14 @@ class TelegramService {
    */
   async sendLongMessage(chatId, text, options = {}) {
     if (!text) return;
-    const CHUNK_SIZE = 4000;
+    // Telegram max is 4096 chars — use full limit, no artificial cuts Boss!
+    const CHUNK_SIZE = 4096;
     for (let i = 0; i < text.length; i += CHUNK_SIZE) {
-      let chunk = text.slice(i, i + CHUNK_SIZE);
-      
+      const chunk = text.slice(i, i + CHUNK_SIZE);
       try {
-        // Force Plain Text to prevent Markdown parsing crashes
         await this.bot.sendMessage(chatId, chunk);
+        // Small delay between chunks to avoid rate limiting
+        if (i + CHUNK_SIZE < text.length) await new Promise(r => setTimeout(r, 300));
       } catch (e) {
         logger.error(`Telegram Chunk Error: ${e.message}`);
       }
@@ -58,27 +59,67 @@ class TelegramService {
 
       logger.info(`Telegram Recv: ${text}`);
 
-      let typingInterval;
-      try {
-        // Show 'typing...' status every 4 seconds to keep it active
-        await this.bot.sendChatAction(chatId, 'typing');
-        typingInterval = setInterval(() => {
-          this.bot.sendChatAction(chatId, 'typing').catch(() => {});
-        }, 4000);
+      // 🛡️ INSTANT CEO STATUS - Send immediately before processing Boss!
+      const thinkingMsg = await this.bot.sendMessage(chatId, '🧠 CEO analyzing... ⏳').catch(() => null);
 
+      // Keep typing indicator alive
+      const typingInterval = setInterval(() => {
+        this.bot.sendChatAction(chatId, 'typing').catch(() => {});
+      }, 4000);
+
+      try {
         const respond = async (res) => {
           await this.sendLongMessage(chatId, res);
         };
 
-        const result = await handler(text, respond, chatId);
+        let lastStreamText = '';
+        const onStream = async (textChunk) => {
+          if (!textChunk || textChunk === lastStreamText) return;
+          lastStreamText = textChunk;
+          
+          if (textChunk.length <= 4000 && thinkingMsg) {
+            try {
+              await this.bot.editMessageText(textChunk, {
+                chat_id: chatId,
+                message_id: thinkingMsg.message_id
+              });
+            } catch(e) {} // Ignore rate limits during stream!
+          }
+        };
+
+        const result = await handler(text, respond, chatId, onStream);
+
+        // 🛡️ Final Bulletproof Sync for Telegram Boss!
+        // We wait 1 second to bypass any previous rate limits from the live stream
+        await new Promise(r => setTimeout(r, 1000));
+
         if (result) {
-          await this.sendLongMessage(chatId, result, { parse_mode: 'Markdown' });
+          // If message is short enough, update the thinking message ONE LAST time with 100% guaranteed text
+          if (result.length <= 4000 && thinkingMsg) {
+             await this.bot.editMessageText(result, {
+                chat_id: chatId,
+                message_id: thinkingMsg.message_id
+             }).catch(async () => {
+                // If it still fails, just delete and resend!
+                await this.bot.deleteMessage(chatId, thinkingMsg.message_id).catch(() => {});
+                await this.bot.sendMessage(chatId, result);
+             });
+          } else {
+             // If too long, delete the stream message and send as safe chunks!
+             if (thinkingMsg) await this.bot.deleteMessage(chatId, thinkingMsg.message_id).catch(() => {});
+             await this.sendLongMessage(chatId, result);
+          }
+        } else if (thinkingMsg) {
+          await this.bot.deleteMessage(chatId, thinkingMsg.message_id).catch(() => {});
         }
       } catch (e) {
         logger.error(`Error handling Telegram message: ${e.message}`);
-        await this.bot.sendMessage(chatId, '⚠️ Boss, error aachchu analysis pannum pothu. Snag reported.');
+        if (thinkingMsg) {
+          await this.bot.deleteMessage(chatId, thinkingMsg.message_id).catch(() => {});
+        }
+        await this.bot.sendMessage(chatId, '⚠️ Boss, error aachchu. Try again!');
       } finally {
-        if (typingInterval) clearInterval(typingInterval);
+        clearInterval(typingInterval);
       }
     });
   }

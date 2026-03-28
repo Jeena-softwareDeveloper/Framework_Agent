@@ -11,12 +11,30 @@ class BrowserService {
     if (!this.browser) {
       this.browser = await puppeteer.launch({ 
         headless: "new", 
-        userDataDir: 'd:/access/Agent-Framework/.puppeteer-data', // Bot's brain memory for sessions!
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-features=IsolateOrigins,site-per-process'] 
+        userDataDir: 'd:/access/Agent-Framework/.puppeteer-data', // Persistent Session Storage
+        args: [
+          '--no-sandbox', 
+          '--disable-setuid-sandbox', 
+          '--disable-blink-features=AutomationControlled',
+          '--disable-features=IsolateOrigins,site-per-process',
+          '--window-size=1920,1080',
+          '--no-first-run',
+          '--no-zygote'
+        ] 
       });
-      this.page = await this.browser.newPage();
+      const pages = await this.browser.pages();
+      this.page = pages.length > 0 ? pages[0] : await this.browser.newPage();
+      
+      // 🛡️ HUMAN SPOOFING SEQUENCE Boss!
+      await this.page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
+      await this.page.evaluateOnNewDocument(() => {
+        Object.defineProperty(navigator, 'webdriver', { get: () => false });
+        Object.defineProperty(navigator, 'chrome', { get: () => ({ runtime: {} }) });
+        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
+      });
+
       await this.page.setViewport({ width: 1280, height: 800 });
-      logger.info('🚀 Puppeteer Browser Engine Injected!');
+      logger.info('🚀 Persistent Sniper Engine Injected for Bullet Speed Boss! 🛡️⚡');
     }
     return this.page;
   }

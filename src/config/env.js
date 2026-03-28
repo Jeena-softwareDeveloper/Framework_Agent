@@ -3,6 +3,8 @@ dotenv.config();
 
 export const ENV = {
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  OLLAMA_URL: process.env.OLLAMA_URL || 'http://localhost:11434',
+  OLLAMA_MODEL: process.env.OLLAMA_MODEL || 'llama3.2:1b',
   MONGODB_URI: process.env.DB_URL,
   GITHUB_TOKEN: process.env.GITHUB_TOKEN,
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
@@ -15,9 +17,9 @@ export const ENV = {
 };
 
 export const validateEnv = () => {
-  const required = ['GEMINI_API_KEY'];
+  const required = ['OLLAMA_MODEL'];
   required.forEach(key => {
-    if (!ENV[key] || ENV[key].includes('your_')) {
+    if (!ENV[key]) {
       console.warn(`[WARNING] Missing ${key} in .env`);
     }
   });
