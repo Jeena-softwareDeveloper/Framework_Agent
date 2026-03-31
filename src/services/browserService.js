@@ -72,16 +72,25 @@ class BrowserService {
       const elements = Array.from(document.querySelectorAll(selectors));
       
       return elements
-        .map(el => ({
-          tag: el.tagName,
-          text: (el.innerText || el.placeholder || el.value || el.ariaLabel || '').trim().slice(0, 100),
-          id: el.id,
-          class: el.className,
-          type: el.type,
-          selector: el.id ? `#${el.id}` : (el.tagName.toLowerCase() + (el.className ? `.${Array.from(el.classList).join('.')}` : ''))
-        }))
-        .filter(e => e.text.length > 2) // Filter noise but keep content
-        .slice(0, 50);
+        .map(el => {
+          // 🛡️ BATTLE TEST: Clean up messy dynamic selectors Boss! 🧬⚡
+          let cleanSelector = el.tagName.toLowerCase();
+          if (el.id) {
+              cleanSelector = `#${el.id}`;
+          } else if (el.className && typeof el.className === 'string') {
+              const firstClass = el.className.split(' ')[0].trim();
+              if (firstClass && firstClass.length < 50) cleanSelector += `.${firstClass}`;
+          }
+          
+          return {
+            tag: el.tagName,
+            text: (el.innerText || el.placeholder || el.value || el.ariaLabel || '').trim().slice(0, 100),
+            selector: cleanSelector,
+            isVisible: el.offsetWidth > 0 && el.offsetHeight > 0
+          };
+        })
+        .filter(e => e.isVisible && e.text.length > 1) // Only interactive & visible Boss!
+        .slice(0, 30);
     });
   }
 

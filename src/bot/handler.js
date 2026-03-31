@@ -71,6 +71,39 @@ export async function handleUserInput(input, respond, chatId = 'current', onStre
         }
     }
 
+    // 🛡️ TOP-LEVEL COMMAND: Instagram Login Integration Boss! 👤⚡🚀
+    if (lowInput.startsWith('/login_ig')) {
+        const parts = trimmedInput.split(/\s+/);
+        if (parts.length < 3) return "❌ Boss, IG login correct-ah kudunga: `/login_ig <username> <password>`";
+        
+        const username = parts[1].replace(/[<>]/g, '');
+        const password = parts[2].replace(/[<>]/g, '');
+        
+        await respond(`🕵️‍♂️ *CEO Mission:* Initializing Instagram human-stealth login for **${username}** Boss... 🛡️🧿🧬`);
+        
+        try {
+            const { instagram } = await import('../services/instagramService.js');
+            const success = await instagram.login(username, password);
+            
+            if (success) {
+                return `✔ *Instagram Success:* Logged in and session authenticated as **${username}** Boss! 🛡️💎🚀\n\nI can now perform human-like actions. Reply with \`/act_human\` to start browsing!`;
+            } else {
+                return "❌ *IG Login Failed:* Could not verify login. Check credentials or manual verification Boss!";
+            }
+        } catch (err) {
+            return `❌ *IG mission snag:* "${err.message}" Boss!`;
+        }
+    }
+
+    if (lowInput === '/act_human') {
+        const { instagram } = await import('../services/instagramService.js');
+        if (!instagram.isLoggedIn) return "🛡️ Boss, first login pannunga! Use `/login_ig <user> <pass>`";
+        
+        await respond(`🧬 *CEO Stealth:* Commencing human-like browsing patterns on Instagram feed Boss... 🛡️🧿`);
+        await instagram.actHuman();
+        return "✔ *Stealth Pattern Complete:* I've scrolled and interacted like a real human to build session authority Boss! 🛡️⚡💎";
+    }
+
     if (isSearchRequest) {
       userStates.set(chatId, { stage: 'awaiting_location' });
       return 'I can jump on that immediately Boss. **Endha area-la leads thedanum?**';

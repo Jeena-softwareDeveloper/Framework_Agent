@@ -65,7 +65,7 @@ class TelegramService {
       // Keep typing indicator alive
       const typingInterval = setInterval(() => {
         this.bot.sendChatAction(chatId, 'typing').catch(() => {});
-      }, 4000);
+      }, 5000);
 
       try {
         const respond = async (res) => {
@@ -73,9 +73,15 @@ class TelegramService {
         };
 
         let lastStreamText = '';
+        let lastUpdateTime = 0; // 🛡️ Rate limit protector!
         const onStream = async (textChunk) => {
           if (!textChunk || textChunk === lastStreamText) return;
+          
+          const now = Date.now();
+          if (now - lastUpdateTime < 2000) return; 
+
           lastStreamText = textChunk;
+          lastUpdateTime = now;
           
           if (textChunk.length <= 4000 && thinkingMsg) {
             try {
@@ -83,7 +89,11 @@ class TelegramService {
                 chat_id: chatId,
                 message_id: thinkingMsg.message_id
               });
-            } catch(e) {} // Ignore rate limits during stream!
+            } catch(e) {
+              // Ignore rate limits during stream!
+              // If it fails, we wait longer next time.
+              lastUpdateTime = now + 2000; 
+            } 
           }
         };
 

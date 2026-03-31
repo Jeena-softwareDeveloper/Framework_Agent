@@ -121,7 +121,7 @@ class LLMService {
       }
     ];
 
-    logger.info('🧠 Ollama Local CEO Brain (Llama 3.2 3B) Initialized Boss! 🛡️⚡🚀');
+    logger.info('🧠 Jeenora AGENT-FRAMEWORK Brain Initialized Boss! 🛡️⚡🚀');
   }
 
   async deepThink(prompt, maxDepth = 1, chatId = "default_user", onStream = null) {
@@ -135,43 +135,117 @@ class LLMService {
     }));
 
     try {
-      logger.info(`🧠 DeepSeek Direct Call: "${prompt.slice(0, 40)}"`);
+      logger.info(`🧠 LLM Brain Call: "${prompt.slice(0, 40)}"`);
 
       // 🚀 HYBRID DIRECT CALL — Fast text, but supports [AGENT_SEARCH] Tool! 🛡️⚡
-      const { deepSeek } = await import('./deepSeekService.js');
       const { telegram } = await import('./telegramService.js');
+      
+      let engine;
+      if (ENV.OPENROUTER_API_KEY) {
+          const { openRouter } = await import('./openRouterService.js');
+          engine = openRouter;
+          logger.info(`🚀 Using OpenRouter Brain (${ENV.OPENROUTER_MODEL}) Boss!`);
+      } else {
+          const { deepSeek } = await import('./deepSeekService.js');
+          engine = deepSeek;
+          logger.info(`🚀 Using DeepSeek Cloud Scraper Boss!`);
+      }
       
       let iteration = 0;
       let currentPrompt = prompt;
       let finalResponse = "";
 
-      while (iteration < 3) {
-        let responseText = await deepSeek.think(currentPrompt, history, onStream);
+      // 🛡️ BATTLE TEST: Persistent loop for autonomous navigation Boss! 🛡️⚡🚀
+      while (iteration < 10) {
+        let responseText = await engine.think(currentPrompt, history, onStream);
         
-        // 🛡️ BATTLE TEST: Did the CEO ask the Agent to search Google?
+        // 🛡️ GENERIC AUTONOMOUS NAVIGATOR TOOLS Boss! 👤⚡🚀🧿🧬
+        const navMatch = responseText.match(/\[NAVIGATE\]\s*([^ \n\r\t]+)/i);
+        const clickMatch = responseText.match(/\[CLICK\]\s*([^ \n\r\t]+)/i);
+        const typeMatch = responseText.match(/\[TYPE\]\s*([^ \n\r\t]+)\s+(.+)/i);
+        const readMatch = responseText.match(/\[READ\]/i);
+        const scrollMatch = responseText.match(/\[SCROLL\]\s*(\S+)/i);
+        const askMatch = responseText.match(/\[ASK_USER\]\s*(.+)/i);
         const searchMatch = responseText.match(/\[AGENT_SEARCH\]([^\[\]\n]+)/i);
-        
-        if (searchMatch) {
-            const query = searchMatch[1].trim();
-            logger.info(`🤖 Agent Tool Triggered by CEO: WebSearch -> ${query}`);
-            
-            // Notify Boss 
-            await telegram.sendMessage(chatId ? chatId : ENV.TELEGRAM_CHAT_ID, `🔍 *CEO Requesting Agent:* Searching Google for "${query}" Boss...`);
-            
-            try {
-               const { search } = await import('./searchService.js');
-               const searchResults = await search.deepSearch(query);
-               currentPrompt = `[SYSTEM TOOL RESULT for live internet search "${query}"]: \n${JSON.stringify(searchResults).slice(0, 2500)}\n\nNow, give the final strategy/answer to the boss in Tanglish based on this data.`;
-            } catch (e) {
-               currentPrompt = `[SYSTEM TOOL FAIL]: Search failed with error ${e.message}. Tell the boss you couldn't search right now in Tanglish.`;
+
+        // 🛡️ PRIORITY: TOOL EXECUTION Boss! 🛠️🎯
+        try {
+            if (navMatch) {
+                const url = navMatch[1].trim();
+                logger.info(`🤖 Navigator: Moving to ${url}`);
+                await telegram.sendMessage(chatId, `🌐 *Navigator:* Moving to **${url}** Boss...`);
+                const title = await (await import('./browserService.js')).browser.navigate(url);
+                currentPrompt = `[SYSTEM NAVIGATOR RESULT]: Arrived at "${title}". Page Loaded. Now [READ] to see what's on screen and find the inputs/buttons Boss!`;
+                iteration++;
+                continue;
             }
-            
+
+            if (readMatch) {
+                logger.info('🤖 Navigator: Reading page structure');
+                const { browser } = await import('./browserService.js');
+                const elements = await browser.getInteractables();
+                const textContent = await browser.getContent();
+                currentPrompt = `[SYSTEM READ RESULT]: \nVisible elements: ${JSON.stringify(elements)}\n\nText Summary: ${textContent.slice(0, 1000)}\n\nNow decide which [CLICK] or [TYPE] to perform next to log in or achieve the goal Boss!`;
+                iteration++;
+                continue;
+            }
+
+            if (typeMatch) {
+                const selector = typeMatch[1].trim();
+                const text = typeMatch[2].trim();
+                logger.info(`🤖 Navigator: Typing into ${selector}`);
+                const result = await (await import('./browserService.js')).browser.type(selector, text);
+                currentPrompt = `[SYSTEM TYPE RESULT]: ${result}. Now [READ] to verify it's typed and find the Submit button Boss!`;
+                iteration++;
+                continue;
+            }
+
+            if (clickMatch) {
+                const selector = clickMatch[1].trim();
+                logger.info(`🤖 Navigator: Clicking ${selector}`);
+                const result = await (await import('./browserService.js')).browser.click(selector);
+                currentPrompt = `[SYSTEM CLICK RESULT]: ${result}. Now [READ] to see its effect Boss!`;
+                iteration++;
+                continue;
+            }
+
+            if (scrollMatch) {
+                const dir = scrollMatch[1].trim();
+                logger.info(`🤖 Navigator: Scrolling ${dir}`);
+                await (await import('./browserService.js')).browser.scroll(dir);
+                currentPrompt = `[SYSTEM SCROLL RESULT]: Scrolled ${dir}. Now [READ] again Boss!`;
+                iteration++;
+                continue;
+            }
+
+            if (searchMatch) {
+                const query = searchMatch[1].trim();
+                logger.info(`🤖 Agent Tool Triggered by CEO: WebSearch -> ${query}`);
+                await telegram.sendMessage(chatId, `🔍 *CEO Requesting Agent:* Searching Google for "${query}" Boss...`);
+                
+                const { search } = await import('./searchService.js');
+                const searchResults = await search.deepSearch(query);
+                currentPrompt = `[SYSTEM TOOL RESULT for live internet search "${query}"]: \n${JSON.stringify(searchResults).slice(0, 2500)}\n\nNow continue your mission based on this data Boss!`;
+                iteration++;
+                continue;
+            }
+
+            if (askMatch) {
+                const question = askMatch[1].trim();
+                logger.info(`🤖 Navigator: Asking Boss -> ${question}`);
+                await telegram.sendMessage(chatId, `👤 *CEO Request:* ${question}`);
+                return `Boss, I've sent the request to you: "${question}". Waiting for your reply!`;
+            }
+        } catch (toolError) {
+            logger.warn(`🤖 Tool Error Encountered: ${toolError.message}`);
+            currentPrompt = `[SYSTEM TOOL ERROR]: "${toolError.message}". This selector or action failed. Please [READ] the page again to find a better selector or try a different approach Boss!`;
             iteration++;
-            continue; // Loop back and feed the results to DeepSeek!
+            continue;
         }
 
-        finalResponse = responseText || "Boss, DeepSeek-lendhu response varalai. Try again!";
-        break; // Normal Tanglish response reached! Finish!
+
+        finalResponse = responseText || "Boss, LLM-lendhu response varalai. Try again!";
+        break; // Normal conversation reached!
       }
 
       // Save conversation history
@@ -180,8 +254,8 @@ class LLMService {
 
       return finalResponse;
     } catch (e) {
-      logger.error(`❌ DeepSeek Error: ${e.message}`);
-      return `Boss, DeepSeek-lendhu result edukka prechana aachchu: ${e.message}`;
+      logger.error(`❌ LLM Brain Error: ${e.message}`);
+      return `Boss, LLM Brain-lendhu result edukka prechana aachchu: ${e.message}`;
     }
   }
 }
